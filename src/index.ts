@@ -1,7 +1,7 @@
 import { tokenize } from "./parser.js";
 
 const CODE = `
-const isPrime = function (value: number) boolean {
+const isPrime = fn (value: number) boolean {
 	if (i == 1) return false;
 	if (i == 2) return true;
 
@@ -14,7 +14,7 @@ const isPrime = function (value: number) boolean {
 	return true;
 }
 
-const primesUpTo = function (n: number) any {
+const primesUpTo = fn (n: number) any {
 	var i = 2;
 	var ret: any = 2;
 

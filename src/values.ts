@@ -869,8 +869,8 @@ export function toString(value: Value): string {
 		case TYPED_ARRAY: return `${toString(value.elementType)}[]`;
 		case TUPLE: return "[" + value.value.map(v => toString(v)).join(", ") + "]";
 		case OBJECT: return "{ " + Object.entries(value.value).map(([k, v]) => `${k}: ${toString(v)}`).join(", ") + " }";
-		case SIGNATURE: return "signature (" + value.argumentTypes.map(t => toString(t)).join(", ") + ") " + toString(value.returnType);
-		case FUNCTION: return "function (" + value.arguments.map(a => `${a.name}: ${toString(a.type)}`).join(", ") + ") " + toString(value.returnType) + " {}";
+		case SIGNATURE: return "sig (" + value.argumentTypes.map(t => toString(t)).join(", ") + ") " + toString(value.returnType);
+		case FUNCTION: return "fn (" + value.arguments.map(a => `${a.name}: ${toString(a.type)}`).join(", ") + ") " + toString(value.returnType) + " {}";
 		case UNION: return value.values.map(v => toString(v)).join(" | ");
 		case ANY: return "any";
 	}

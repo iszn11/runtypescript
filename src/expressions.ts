@@ -92,7 +92,7 @@ export type SignatureExpression = {
 
 export type FunctionExpression = {
 	readonly type: typeof FUNCTION;
-	readonly arguments: FunctionArgument[];
+	readonly arguments: readonly FunctionArgument[];
 	readonly returnType: Expression;
 	readonly body: readonly Statement[];
 }
@@ -110,6 +110,14 @@ export type CallExpression = {
 
 export type DecltypeExpression = {
 	readonly type: typeof DECLTYPE;
+	/* NOTE decltype *could* follow indexing paths, just like lvalue assignment
+	 * evaluation. For now, let's keep it simple and stick to identifier only.
+	 *
+	 * The improvemnt would make something like this possible:
+	 *
+	 * const tuple = [1, number, "foo"]; // decltype deliteralized to [number, number, string]
+	 * const type: decltype tuple[2] = "bar"; // decltype is string
+	 */
 	readonly name: string;
 };
 
@@ -129,6 +137,11 @@ export type Expression =
 export const UnaryExpression = (type: UnaryExpression["type"], op: Expression): UnaryExpression => ({ type, op });
 export const BinaryExpression = (type: BinaryExpression["type"], a: Expression, b: Expression): BinaryExpression => ({ type, a, b });
 export const LiteralExpression = (value: Value): LiteralExpression => ({ type: LITERAL, value });
+export const TypedArrayExpression = (elementType: Expression): TypedArrayExpression => ({ type: TYPED_ARRAY, elementType });
+export const TupleExpression = (value: readonly Expression[]): TupleExpression => ({ type: TUPLE, value: [...value] });
+export const ObjectExpression = (value: { readonly [_: string]: Expression }): ObjectExpression => ({ type: OBJECT, value: { ...value } });
+export const SignatureExpression = (argumentTypes: readonly Expression[], returnType: Expression): SignatureExpression => ({ type: SIGNATURE, argumentTypes: [...argumentTypes], returnType });
+export const FunctionExpression = (args: FunctionArgument[], returnType: Expression, body: readonly Statement[]): FunctionExpression => ({ type: FUNCTION, arguments: [...args], returnType, body: [...body] });
 export const IdentifierExpression = (name: string): IdentifierExpression => ({ type: IDENTIFIER, name });
 export const CallExpression = (fn: Expression, args: readonly Expression[]) => ({ type: CALL, arguments: [...args] })
 export const DecltypeExpression = (name: string): DecltypeExpression => ({ type: DECLTYPE, name });

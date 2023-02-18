@@ -1,163 +1,395 @@
 import * as tokens from "./tokens.js";
 import * as expressions from "./expressions.js";
 import * as statements from "./statements.js";
+import * as values from "./values.js";
 
-// --- TOKENIZER ---------------------------------------------------------------
-
-type TokenizerContext = {
+type Context = {
 	ptr: number;
-	code: string;
 	tokens: tokens.Token[];
+	statements: statements.Statement[];
 };
 
-export function tokenize(code: string): tokens.Token[] {
-	const ctx: TokenizerContext = {
+export function parse(tokens: tokens.Token[]): statements.Statement[] {
+	const ctx: Context = {
 		ptr: 0,
-		code,
-		tokens: [],
-	}
-
-	while (ctx.ptr < ctx.code.length) {
-		if (skipWhitespace(ctx)) continue;
-		if (skipComment(ctx)) continue;
-		if (tokenizeNumber(ctx)) continue;
-		if (tokenizeString(ctx)) continue;
-		if (tokenizeKeyword(ctx)) continue;
-		if (tokenizeSimple(ctx)) continue;
-		throw new Error("Unrecognized token at position " + ctx.ptr);
-	}
-
-	return ctx.tokens;
+		tokens,
+		statements: [],
+	};
 }
 
-function skipWhitespace(ctx: TokenizerContext): boolean {
-	let skipped = false;
-	while (
-		ctx.ptr < ctx.code.length
-		&& [" ", "\n", "\t", "\r"].indexOf(ctx.code.charAt(ctx.ptr)) !== -1
-	) {
-		skipped = true;
-		ctx.ptr += 1;
-	}
-	return skipped;
+// --- STATEMENTS --------------------------------------------------------------
+
+function parseDeclaration(ctx: Context): boolean {
+
 }
 
-function skipComment(ctx: TokenizerContext): boolean {
-	if (!ctx.code.startsWith("//", ctx.ptr)) {
-		return false;
-	}
+function parseAssignment(ctx: Context): boolean {
 
-	const end = ctx.code.indexOf("\n", ctx.ptr + 2);
-	ctx.ptr = end !== -1 ? end : ctx.code.length;
-	return true;
 }
 
-function tokenizeNumber(ctx: TokenizerContext): boolean {
-	const start = ctx.ptr;
-	let end = start;
-	let dot = false;
+function parseIfElseChain(ctx: Context): boolean {
 
-	while (
-		end < ctx.code.length
-		&& (
-			ctx.code.charCodeAt(end) >= "0".charCodeAt(0) && ctx.code.charCodeAt(end) <= "9".charCodeAt(0)
-			|| dot === false && ctx.code.charAt(end) == "."
-		)
-	) {
-		if (ctx.code.charAt(end) === ".") dot = true;
-		end += 1;
-	}
-
-	if (start < end) {
-		ctx.ptr = end;
-		const value = Number.parseFloat(ctx.code.substring(start, end));
-		ctx.tokens.push(tokens.NumberToken(value));
-		return true;
-	}
-	return false;
 }
 
-function tokenizeString(ctx: TokenizerContext): boolean {
-	if (ctx.code.charAt(ctx.ptr) !== "\"") {
-		return false;
-	}
+function parseWhileLoop(ctx: Context): boolean {
 
-	let str: string = "";
+}
+
+function parseReturn(ctx: Context): boolean {
+
+}
+
+function parseBreak(ctx: Context): boolean {
+
+}
+
+function parseContinue(ctx: Context): boolean {
+
+}
+
+function parseExpressionStatement(ctx: Context): boolean {
+
+}
+
+function parseBlock(ctx: Context): statements.Statement[] {
+
+}
+
+// --- EXPRESSIONS -------------------------------------------------------------
+
+function parseExpression(ctx: Context, parentPriority = -1): expressions.Expression | undefined {
+
+	let ret = parseOperand(ctx);
+	if (ret === undefined) return undefined;
+
 	while (true) {
-		ctx.ptr += 1;
-		if (ctx.ptr >= ctx.code.length) throw new Error("EOF inside string literal");
+		if (ctx.ptr >= ctx.tokens.length) break;
+		const op = isBinaryOp(ctx.tokens[ctx.ptr]);
+		if (op === undefined  || parentPriority > op.priority) break;
 
-		let char = ctx.code.charAt(ctx.ptr);
-		if (char === "\"") {
-			ctx.tokens.push(tokens.StringToken(str));
-			ctx.ptr += 1;
-			return true;
+		ctx.ptr += 1;
+
+		const rhs = parseExpression(ctx, op.priority + 1);
+		if (rhs === undefined) {
+			throw new Error("Expression expected for rhs of a binary operation");
 		}
 
-		if (char === "\\") {
-			ctx.ptr += 1;
-			if (ctx.ptr >= ctx.code.length) throw new Error("EOF inside string literal");
+		ret = expressions.BinaryExpression(op.expressionType, ret, rhs);
+	}
 
-			char = ctx.code.charAt(ctx.ptr);
-			switch (char) {
-				case "\\": char = "\\"; break;
-				case "\"": char = "\""; break;
-				case "n": char = "\n"; break;
-				case "t": char = "\t"; break;
-				case "r": char = "\r"; break;
-				default: throw new Error(`Invalid escape sequence \\${char}`);
+	/* TODO Parse function call and object/tuple indexing */
+
+	return ret;
+}
+
+function parseOperand(ctx: Context): expressions.Expression | undefined {
+
+	if (ctx.ptr >= ctx.tokens.length) return undefined;
+	const token = ctx.tokens[ctx.ptr];
+
+	// unary
+
+	const unaryOp = isUnaryOp(token);
+	if (unaryOp !== undefined) {
+		ctx.ptr += 1;
+
+		const operand = parseExpression(ctx, unaryOp.priority);
+		if (operand === undefined) {
+			throw new Error("Expression expected for operand of a unary operation");
+		}
+
+		return expressions.UnaryExpression(unaryOp.expressionType, operand);
+	}
+
+	// group
+
+	if (eatSimpleToken(ctx, "(")) {
+		const subExpression = parseExpression(ctx);
+		if (subExpression === undefined) {
+			throw new Error("Expression excepted within parenthesis");
+		}
+		if (!eatSimpleToken(ctx, ")")) {
+			throw new Error("\")\" expected to close expression within parenthesis");
+		}
+
+		return subExpression;
+	}
+
+	// decltype
+
+	if (eatSimpleToken(ctx, "decltype")) {
+		if (ctx.ptr >= ctx.tokens.length) {
+			throw new Error("EOF while parsing decltype operand");
+		}
+
+		const nextToken = ctx.tokens[ctx.ptr];
+		if (nextToken.type !== tokens.IDENTIFIER) {
+			throw new Error("decltype expression supports pure identifiers only");
+		}
+
+		ctx.ptr += 1;
+		return expressions.DecltypeExpression(nextToken.name);
+	}
+
+	// literals
+
+	const literal = parseLiteral(ctx);
+	if (literal !== undefined) {
+		return literal;
+	}
+
+	// identifier
+
+	if (token.type === tokens.IDENTIFIER) {
+		ctx.ptr += 1;
+		return expressions.IdentifierExpression(token.name);
+	}
+
+	return undefined;
+}
+
+function parseLiteral(ctx: Context): expressions.Expression | undefined {
+
+	if (ctx.ptr >= ctx.tokens.length) return undefined;
+	const token = ctx.tokens[ctx.ptr];
+
+	// number
+
+	if (token.type === tokens.NUMBER) {
+		ctx.ptr += 1;
+		return expressions.LiteralExpression(values.NumberLiteralValue(token.value));
+	}
+
+	// string
+
+	if (token.type === tokens.STRING) {
+		ctx.ptr += 1;
+		return expressions.LiteralExpression(values.StringLiteralValue(token.value));
+	}
+
+	// tuple
+
+	if (eatSimpleToken(ctx, "[")) {
+		const value: expressions.Expression[] = [];
+		while (true) {
+			if (eatSimpleToken(ctx, "]")) {
+				return expressions.TupleExpression(value);
+			}
+
+			const element = parseExpression(ctx);
+			if (element === undefined) {
+				throw new Error("Expression expected for tuple element");
+			}
+
+			value.push(element);
+			if (eatSimpleToken(ctx, "]")) {
+				return expressions.TupleExpression(value);
+			}
+			if (!eatSimpleToken(ctx, ",")) {
+				throw new Error("\",\" expected");
 			}
 		}
-
-		str += char;
-	}
-}
-
-function tokenizeKeyword(ctx: TokenizerContext): boolean {
-	if (!isIdentifierStart(ctx.code.charAt(ctx.ptr))) {
-		return false;
 	}
 
-	const start = ctx.ptr;
-	let end = start + 1;
-	while (
-		end < ctx.code.length
-		&& isIdentifierMiddle(ctx.code.charAt(end))
-	) {
-		end += 1;
-	}
+	// object
 
-	ctx.ptr = end;
-	const identifier = ctx.code.substring(start, end);
-	if (isKeyword(identifier)) {
-		ctx.tokens.push(tokens.SimpleToken(identifier));
-	} else {
-		ctx.tokens.push(tokens.IdentifierToken(identifier));
-	}
-	return true;
-}
+	if (eatSimpleToken(ctx, "{")) {
+		const value: { [_: string]: expressions.Expression } = {};
+		while (true) {
+			if (eatSimpleToken(ctx, "}")) {
+				return expressions.ObjectExpression(value);
+			}
 
-function tokenizeSimple(ctx: TokenizerContext): boolean {
-	for (const token of tokens.SIMPLE_TOKENS) {
-		if (ctx.code.startsWith(token, ctx.ptr)) {
-			ctx.tokens.push(tokens.SimpleToken(token));
-			ctx.ptr += token.length;
-			return true;
+			if (ctx.ptr >= ctx.tokens.length) {
+				throw new Error("EOF while parsing object property name");
+			}
+
+			const identifierToken = ctx.tokens[ctx.ptr];
+			if (identifierToken.type !== tokens.IDENTIFIER) {
+				throw new Error("Identifier expected for object property name");
+			}
+			if (identifierToken.name in value) {
+				throw new Error(`Duplicate property name in object literal: ${identifierToken.name}`);
+			}
+			ctx.ptr += 1;
+
+			if (!eatSimpleToken(ctx, ":")) {
+				throw new Error("\":\" expected");
+			}
+
+			const propValue = parseExpression(ctx);
+			if (propValue === undefined) {
+				throw new Error("Expression expected for object property value");
+			}
+
+			value[identifierToken.name] = propValue;
+			if (eatSimpleToken(ctx, "}")) {
+				return expressions.ObjectExpression(value);
+			}
+			if (!eatSimpleToken(ctx, ",")) {
+				throw new Error("\",\" expected");
+			}
 		}
 	}
-	return false;
+
+	// signature
+
+	if (eatSimpleToken(ctx, "sig")) {
+		if (!eatSimpleToken(ctx, "(")) {
+			throw new Error("\"(\" expected");
+		}
+
+		const argumentTypes: expressions.Expression[] = [];
+		while (true) {
+			if (eatSimpleToken(ctx, ")")) break;
+
+			const argType = parseExpression(ctx);
+			if (argType === undefined) {
+				throw new Error("Expression expected for signature argument type");
+			}
+
+			argumentTypes.push(argType);
+			if (eatSimpleToken(ctx, ")")) {
+				break;
+			}
+			if (!eatSimpleToken(ctx, ",")) {
+				throw new Error("\",\" expected");
+			}
+		}
+		const returnType = parseExpression(ctx);
+		if (returnType === undefined) {
+			throw new Error("Expression expected for signature return type");
+		}
+
+		return expressions.SignatureExpression(argumentTypes, returnType);
+	}
+
+	// function
+
+	if (eatSimpleToken(ctx, "fn")) {
+		if (!eatSimpleToken(ctx, "(")) {
+			throw new Error("\"(\" expected");
+		}
+
+		const args: expressions.FunctionArgument[] = [];
+		while (true) {
+			if (eatSimpleToken(ctx, ")")) break;
+
+			if (ctx.ptr >= ctx.tokens.length) {
+				throw new Error("EOF while parsing function argument name");
+			}
+
+			const identifierToken = ctx.tokens[ctx.ptr];
+			if (identifierToken.type !== tokens.IDENTIFIER) {
+				throw new Error("Identifier expected for function argument name");
+			}
+			if (args.some(arg => arg.name === identifierToken.name)) {
+				throw new Error(`Duplicate argument name in function literal: ${identifierToken.name}`);
+			}
+			ctx.ptr += 1;
+
+			if (!eatSimpleToken(ctx, ":")) {
+				throw new Error("\":\" expected");
+			}
+
+			const argType = parseExpression(ctx);
+			if (argType === undefined) {
+				throw new Error("Expression expected for signature argument type");
+			}
+
+			args.push({ name: identifierToken.name, type: argType });
+			if (eatSimpleToken(ctx, ")")) {
+				break;
+			}
+			if (!eatSimpleToken(ctx, ",")) {
+				throw new Error("\",\" expected");
+			}
+		}
+		const returnType = parseExpression(ctx);
+		if (returnType === undefined) {
+			throw new Error("Expression expected for signature return type");
+		}
+
+		const block = parseBlock(ctx);
+
+		return expressions.FunctionExpression(args, returnType, block);
+	}
+
+	return undefined;
 }
 
-function isIdentifierStart(char: string) {
-	return /^\p{L}|_$/u.test(char);
+/* OPERATOR PRIORITY
+ * -1 (implicit)
+ *  0 or
+ *  1 and
+ *  2 <, >, <=, >=, ==, !=, extends
+ *  3 |
+ *  4 &
+ *  5 +, - (binary)
+ *  6 *, /, &
+ *  7 not, - (unary), #, ~, decltype
+ */
+
+type UnaryOp = {
+	expressionType: expressions.UnaryExpression["type"];
+	priority: number;
+};
+
+function isUnaryOp(token: tokens.Token): UnaryOp | undefined {
+	if (token.type !== tokens.SIMPLE) {
+		return undefined;
+	}
+
+	switch (token.token) {
+		case "not": return { expressionType: expressions.NOT, priority: 7 };
+		case "-": return { expressionType: expressions.NEGATE, priority: 7 };
+		case "#": return { expressionType: expressions.ARRAY_LENGTH, priority: 7 };
+		case "~": return { expressionType: expressions.DELITERALIZE, priority: 7 };
+		default: return undefined;
+	}
 }
 
-function isIdentifierMiddle(char: string) {
-	return /^\p{L}|\p{Nd}|\p{Nl}|_$/u.test(char);
+type BinaryOp = {
+	expressionType: expressions.BinaryExpression["type"];
+	priority: number;
 }
 
-function isKeyword(identifier: string): identifier is typeof tokens.KEYWORD_LIKE_TOKENS[number] {
-	return tokens.KEYWORD_LIKE_TOKENS.includes(identifier as typeof tokens.KEYWORD_LIKE_TOKENS[number]);
+function isBinaryOp(token: tokens.Token): BinaryOp | undefined {
+	if (token.type !== tokens.SIMPLE) {
+		return undefined;
+	}
+
+	switch (token.token) {
+		case "+": return { expressionType: expressions.ADD, priority: 5 };
+		case "-": return { expressionType: expressions.SUB, priority: 5 };
+		case "*": return { expressionType: expressions.MUL, priority: 6 };
+		case "/": return { expressionType: expressions.DIV, priority: 6 };
+		case "%": return { expressionType: expressions.MOD, priority: 6 };
+		case "==": return { expressionType: expressions.EQUAL, priority: 2 };
+		case "!=": return { expressionType: expressions.NOT_EQUAL, priority: 2 };
+		case ">": return { expressionType: expressions.GREATER, priority: 2 };
+		case ">=": return { expressionType: expressions.GREATER_OR_EQUAL, priority: 2 };
+		case "<": return { expressionType: expressions.LESS, priority: 2 };
+		case "<=": return { expressionType: expressions.LESS_OR_EQUAL, priority: 2 };
+		case "and": return { expressionType: expressions.AND, priority: 1 };
+		case "or": return { expressionType: expressions.OR, priority: 0 };
+		case "|": return { expressionType: expressions.UNION, priority: 3 };
+		case "&": return { expressionType: expressions.INTERSECT, priority: 4 };
+		case "extends": return { expressionType: expressions.EXTENDS, priority: 2 };
+		default: return undefined;
+	}
 }
 
-// --- PARSER ------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+
+function eatSimpleToken(ctx: Context, token: tokens.SimpleToken["token"]): boolean {
+	if (ctx.ptr >= ctx.tokens.length) return false;
+	const currentToken = ctx.tokens[ctx.ptr];
+
+	if (currentToken.type === tokens.SIMPLE && currentToken.token === token) {
+		ctx.ptr += 1;
+		return true;
+	} else {
+		return false;
+	}
+}
