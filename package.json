@@ -1,0 +1,12 @@
+{
+	"name": "runtypescript",
+	"author": "Szymon Nowakowski <smnbdg13@gmail.com> (https://renati.me)",
+	"type": "module",
+	"license": "GPL-2.0-only",
+	"private": true,
+	"dependencies": {
+		"@types/node": "^18.14.0",
+		"tslib": "^2.5.0",
+		"typescript": "^5.0.0-beta"
+	}
+}
