@@ -22,6 +22,8 @@ type LValueRef = {
 	path: (number | string)[];
 };
 
+const TAU = 2 * Math.PI;
+
 const GLOBAL_SCOPE = (): Scope => ({
 	"nil": { constant: true, declaredType: values.NilValue, value: values.NilValue },
 	"false": { constant: true, declaredType: values.FalseValue, value: values.FalseValue },
@@ -30,6 +32,48 @@ const GLOBAL_SCOPE = (): Scope => ({
 	"string": { constant: true, declaredType: values.StringValue, value: values.StringValue },
 	"number": { constant: true, declaredType: values.NumberValue, value: values.NumberValue },
 	"any": { constant: true, declaredType: values.AnyValue, value: values.AnyValue },
+	"nan": { constant: true, declaredType: values.NumberValue, value: values.NumberLiteralValue(Number.NaN) },
+	"inf": { constant: true, declaredType: values.NumberValue, value: values.NumberLiteralValue(Number.POSITIVE_INFINITY) },
+	"pi": { constant: true, declaredType: values.NumberValue, value: values.NumberLiteralValue(Math.PI) },
+	"tau": { constant: true, declaredType: values.NumberValue, value: values.NumberLiteralValue(TAU) },
+	"e": { constant: true, declaredType: values.NumberValue, value: values.NumberLiteralValue(Math.E) },
+	"print": {
+		constant: true,
+		declaredType: values.SignatureValue([values.AnyValue], values.NilValue),
+		value: values.FunctionValueIntrinsic(
+			[{ name: "value", type: values.StringValue }],
+			values.NilValue,
+			(value: values.Value) => {
+				console.log(values.toString(value));
+				return values.NilValue;
+			},
+		),
+	},
+	"sqrt": {
+		constant: true,
+		declaredType: values.SignatureValue([values.NumberValue], values.NumberValue),
+		value: values.FunctionValueIntrinsic(
+			[{ name: "value", type: values.NumberValue }],
+			values.NumberValue,
+			(value: values.Value) => {
+				if (value.type !== values.NUMBER_LITERAL) {
+					throw new Error("sqrt accepts only number literals");
+				}
+				return values.NumberLiteralValue(Math.sqrt(value.value));
+			},
+		),
+	},
+	"to_string": {
+		constant: true,
+		declaredType: values.SignatureValue([values.AnyValue], values.NilValue),
+		value: values.FunctionValueIntrinsic(
+			[{ name: "value", type: values.StringValue }],
+			values.NilValue,
+			(value: values.Value) => {
+				return values.StringLiteralValue(values.toString(value));
+			},
+		),
+	},
 });
 
 type Context = {
@@ -156,10 +200,13 @@ function evaluateExpression(ctx: Context, expression: expressions.Expression): v
 		case expressions.ADD: {
 			const a = evaluateExpression(ctx, expression.a);
 			const b = evaluateExpression(ctx, expression.b);
-			if (a.type !== values.NUMBER_LITERAL || b.type !== values.NUMBER_LITERAL) {
+			if (a.type === values.STRING_LITERAL && b.type === values.STRING_LITERAL) {
+				return values.StringLiteralValue(a.value + b.value);
+			} else if (a.type === values.NUMBER_LITERAL && b.type === values.NUMBER_LITERAL) {
+				return values.NumberLiteralValue(a.value + b.value);
+			} else {
 				throw new Error(`Tried adding ${values.toString(a)} and ${values.toString(b)}`);
 			}
-			return values.NumberLiteralValue(a.value + b.value);
 		}
 		case expressions.SUB: {
 			const a = evaluateExpression(ctx, expression.a);
@@ -335,6 +382,18 @@ function evaluateExpression(ctx: Context, expression: expressions.Expression): v
 				throw new Error(`Function ${values.toString(fn)} has ${fn.arguments} argument(s), but ${args.length} provided`);
 			}
 
+			// intrinsic call
+			if (typeof fn.body === "function") {
+				for (let i = args.length; i < args.length; ++i) {
+					const arg = args[i];
+					const { name, type } = fn.arguments[i];
+					if (!values.assignableTo(arg, type)) {
+						throw new Error(`Argument ${values.toString(arg)} named ${name} is not assignable to ${values.toString(type)}`);
+					}
+				}
+				return fn.body(...args);
+			}
+
 			const fnCtx: Context = {
 				scopeStack: [...fn.scopeStack, {}],
 				unwind: null,
@@ -356,6 +415,9 @@ function evaluateExpression(ctx: Context, expression: expressions.Expression): v
 			runBlock(fnCtx, fn.body, true);
 
 			if (fnCtx.unwind?.type === "return") {
+				if (!values.assignableTo(fnCtx.unwind.value, fn.returnType)) {
+					throw new Error(`Returned value ${values.toString(fnCtx.unwind.value)} not assignable to declared return type ${values.toString(fn.returnType)}`);
+				}
 				return fnCtx.unwind.value;
 			} else if (fnCtx.unwind?.type !== undefined) {
 				throw new Error(`No while loop found to ${fnCtx.unwind.type}`);

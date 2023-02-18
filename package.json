@@ -4,6 +4,7 @@
 	"type": "module",
 	"license": "GPL-2.0-only",
 	"private": true,
+	"main": "./dist/index.js",
 	"dependencies": {
 		"@types/node": "^18.14.0",
 		"tslib": "^2.5.0",

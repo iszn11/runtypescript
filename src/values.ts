@@ -78,7 +78,7 @@ export type FunctionValue = {
 	readonly type: typeof FUNCTION;
 	readonly arguments: readonly FunctionArgument[];
 	readonly returnType: Value;
-	readonly body: readonly Statement[];
+	readonly body: readonly Statement[] | IntrinsicFunction;
 	readonly scopeStack: readonly Scope[];
 };
 
@@ -121,13 +121,16 @@ export const TupleValue = (value: readonly Value[]): TupleValue => ({ type: TUPL
 export const ObjectValue = (value: { readonly [_: string]: Value }): ObjectValue => ({ type: OBJECT, value: { ...value } });
 export const SignatureValue = (argumentTypes: readonly Value[], returnType: Value): SignatureValue => ({ type: SIGNATURE, argumentTypes, returnType });
 export const FunctionValue = (args: readonly FunctionArgument[], returnType: Value, body: readonly Statement[], scopeStack: readonly Scope[]): FunctionValue => ({ type: FUNCTION, arguments: args, returnType, body, scopeStack: [...scopeStack] });
+export const FunctionValueIntrinsic = (args: readonly FunctionArgument[], returnType: Value, body: IntrinsicFunction): FunctionValue => ({ type: FUNCTION, arguments: args, returnType, body, scopeStack: [] });
 export const UnionValue = (values: readonly Exclude<Value, UnionValue>[]): UnionValue => ({ type: UNION, values });
 export const AnyValue: AnyValue = { type: ANY };
 
 export type FunctionArgument = {
 	name: string;
 	type: Value;
-}
+};
+
+export type IntrinsicFunction = (...args: Value[]) => Value;
 
 export function deliteralize(value: Value): Value {
 
