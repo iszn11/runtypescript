@@ -60,8 +60,8 @@ export type BinaryExpression = {
 		| typeof INTERSECT
 		| typeof EXTENDS
 		| typeof INDEXING;
-	readonly a: Expression;
-	readonly b: Expression;
+	readonly lhs: Expression;
+	readonly rhs: Expression;
 };
 
 export type LiteralExpression = {
@@ -135,7 +135,7 @@ export type Expression =
 	| DecltypeExpression;
 
 export const UnaryExpression = (type: UnaryExpression["type"], op: Expression): UnaryExpression => ({ type, op });
-export const BinaryExpression = (type: BinaryExpression["type"], a: Expression, b: Expression): BinaryExpression => ({ type, a, b });
+export const BinaryExpression = (type: BinaryExpression["type"], a: Expression, b: Expression): BinaryExpression => ({ type, lhs: a, rhs: b });
 export const LiteralExpression = (value: Value): LiteralExpression => ({ type: LITERAL, value });
 export const TypedArrayExpression = (elementType: Expression): TypedArrayExpression => ({ type: TYPED_ARRAY, elementType });
 export const TupleExpression = (value: readonly Expression[]): TupleExpression => ({ type: TUPLE, value: [...value] });
@@ -143,7 +143,7 @@ export const ObjectExpression = (value: { readonly [_: string]: Expression }): O
 export const SignatureExpression = (argumentTypes: readonly Expression[], returnType: Expression): SignatureExpression => ({ type: SIGNATURE, argumentTypes: [...argumentTypes], returnType });
 export const FunctionExpression = (args: FunctionArgument[], returnType: Expression, body: readonly Statement[]): FunctionExpression => ({ type: FUNCTION, arguments: [...args], returnType, body: [...body] });
 export const IdentifierExpression = (name: string): IdentifierExpression => ({ type: IDENTIFIER, name });
-export const CallExpression = (fn: Expression, args: readonly Expression[]) => ({ type: CALL, arguments: [...args] })
+export const CallExpression = (fn: Expression, args: readonly Expression[]): CallExpression => ({ type: CALL, fn, arguments: [...args] })
 export const DecltypeExpression = (name: string): DecltypeExpression => ({ type: DECLTYPE, name });
 
 export type FunctionArgument = {

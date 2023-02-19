@@ -174,7 +174,13 @@ export function union(a: Value | undefined, b: Value | undefined): Value | undef
 			if (b.type === UNION) {
 				return unionOf(...a.values, ...b.values);
 			} else {
-				return unionOf(...a.values, b);
+				const values: Exclude<Value, UnionValue>[] = a.values.map(x => union(x, b)).flatMap(x => x.type === UNION ? x.values : x);
+				const unique = values.reduce((a: Exclude<Value, UnionValue>[], x) => a.every(y => !equals(x, y)) ? [...a, x] : a, []);
+				if (unique.length === 1) {
+					return unique[0];
+				} else {
+					return UnionValue(unique);
+				}
 			}
 		} else {
 			return unionOf(a, ...(b as UnionValue).values)
@@ -867,8 +873,8 @@ export function toString(value: Value): string {
 		case NUMBER: return "number";
 		case NUMBER_LITERAL: return JSON.stringify(value.value);
 		case TYPED_ARRAY: return `${toString(value.elementType)}[]`;
-		case TUPLE: return "[" + value.value.map(v => toString(v)).join(", ") + "]";
-		case OBJECT: return "{ " + Object.entries(value.value).map(([k, v]) => `${k}: ${toString(v)}`).join(", ") + " }";
+		case TUPLE: return value.value.length === 0 ? "[]" : "[" + value.value.map(v => toString(v)).join(", ") + "]";
+		case OBJECT: return Object.keys(value.value).length === 0 ? "{}" : "{ " + Object.entries(value.value).map(([k, v]) => `${k}: ${toString(v)}`).join(", ") + " }";
 		case SIGNATURE: return "sig (" + value.argumentTypes.map(t => toString(t)).join(", ") + ") " + toString(value.returnType);
 		case FUNCTION: return "fn (" + value.arguments.map(a => `${a.name}: ${toString(a.type)}`).join(", ") + ") " + toString(value.returnType) + " {}";
 		case UNION: return value.values.map(v => toString(v)).join(" | ");

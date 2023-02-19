@@ -6,53 +6,251 @@ import * as values from "./values.js";
 type Context = {
 	ptr: number;
 	tokens: tokens.Token[];
-	statements: statements.Statement[];
 };
 
 export function parse(tokens: tokens.Token[]): statements.Statement[] {
 	const ctx: Context = {
 		ptr: 0,
 		tokens,
-		statements: [],
 	};
+
+	const statements: statements.Statement[] = [];
+	while (ctx.ptr < ctx.tokens.length) {
+		statements.push(parseStatement(ctx));
+	}
+
+	return statements;
 }
 
 // --- STATEMENTS --------------------------------------------------------------
 
-function parseDeclaration(ctx: Context): boolean {
-
-}
-
-function parseAssignment(ctx: Context): boolean {
-
-}
-
-function parseIfElseChain(ctx: Context): boolean {
-
-}
-
-function parseWhileLoop(ctx: Context): boolean {
-
-}
-
-function parseReturn(ctx: Context): boolean {
-
-}
-
-function parseBreak(ctx: Context): boolean {
-
-}
-
-function parseContinue(ctx: Context): boolean {
-
-}
-
-function parseExpressionStatement(ctx: Context): boolean {
-
-}
-
 function parseBlock(ctx: Context): statements.Statement[] {
+	if (!eatSimpleToken(ctx, "{")) {
+		throw new Error("\"{\" expected");
+	}
 
+	const ret: statements.Statement[] = [];
+	while (!eatSimpleToken(ctx, "}")) {
+		ret.push(parseStatement(ctx));
+	}
+
+	return ret;
+}
+
+function parseStatement(ctx: Context): statements.Statement {
+	let stmt: statements.Statement | undefined;
+
+	if (stmt = parseDeclaration(ctx)) return stmt;
+	if (stmt = parseAssignment(ctx)) return stmt;
+	if (stmt = parseIfElseChain(ctx)) return stmt;
+	if (stmt = parseWhileLoop(ctx)) return stmt;
+	if (stmt = parseReturn(ctx)) return stmt;
+	if (stmt = parseBreak(ctx)) return stmt;
+	if (stmt = parseContinue(ctx)) return stmt;
+	if (stmt = parseExpressionStatement(ctx)) return stmt;
+
+	throw new Error("Statement expected");
+}
+
+function parseDeclaration(ctx: Context): statements.Statement | undefined {
+	let constant: boolean;
+	if (eatSimpleToken(ctx, "var")) {
+		constant = false;
+	} else if (eatSimpleToken(ctx, "const")) {
+		constant = true;
+	} else {
+		return undefined;
+	}
+
+	if (ctx.ptr >= ctx.tokens.length) {
+		throw new Error("EOF while parsing declaration name");
+	}
+	const identifierToken = ctx.tokens[ctx.ptr];
+	if (identifierToken.type !== tokens.IDENTIFIER) {
+		throw new Error("Identifier expected for declaration name");
+	}
+	ctx.ptr += 1;
+
+	let declaredType: expressions.Expression | undefined = undefined;
+	if (eatSimpleToken(ctx, ":")) {
+		declaredType = parseExpression(ctx);
+		if (declaredType === undefined) {
+			throw new Error("Expression expected to specify declared type");
+		}
+	}
+
+	if (!eatSimpleToken(ctx, "=")) {
+		throw new Error("\"=\" expected");
+	}
+
+	const value = parseExpression(ctx);
+	if (value === undefined) {
+		throw new Error("Expression expected to initialize declaration");
+	}
+
+	if (!eatSimpleToken(ctx, ";")) {
+		throw new Error("\";\" expected");
+	}
+
+	return statements.DeclarationStatement(constant, identifierToken.name, declaredType, value);
+}
+
+function parseAssignment(ctx: Context): statements.Statement | undefined {
+	const start = ctx.ptr;
+	const lhs = parseExpression(ctx);
+	if (lhs === undefined) {
+		return undefined;
+	}
+
+	let shorthand: expressions.BinaryExpression["type"] | undefined;
+	if (eatSimpleToken(ctx, "=")) {
+		shorthand = undefined;
+	} else if (eatSimpleToken(ctx, "+=")) {
+		shorthand = expressions.ADD;
+	} else if (eatSimpleToken(ctx, "-=")) {
+		shorthand = expressions.SUB;
+	} else if (eatSimpleToken(ctx, "*=")) {
+		shorthand = expressions.MUL;
+	} else if (eatSimpleToken(ctx, "/=")) {
+		shorthand = expressions.DIV;
+	} else if (eatSimpleToken(ctx, "%=")) {
+		shorthand = expressions.MOD;
+	} else if (eatSimpleToken(ctx, "|=")) {
+		shorthand = expressions.UNION;
+	} else if (eatSimpleToken(ctx, "&=")) {
+		shorthand = expressions.INTERSECT;
+	} else {
+		ctx.ptr = start;
+		return undefined;
+	}
+
+	let rhs = parseExpression(ctx);
+	if (rhs === undefined) {
+		throw new Error("Expression expected for assignment rhs");
+	}
+
+	if (!eatSimpleToken(ctx, ";")) {
+		throw new Error("\";\" expected");
+	}
+
+	if (shorthand !== undefined) {
+		rhs = expressions.BinaryExpression(shorthand, lhs, rhs);
+	}
+
+	return statements.AssignmentStatement(lhs, rhs);
+}
+
+function parseIfElseChain(ctx: Context): statements.Statement | undefined {
+	if (!eatSimpleToken(ctx, "if")) {
+		return undefined;
+	}
+
+	// NOTE We do a little trickery to remove `readonly` modifier.
+	const chain: statements.IfElseChainStatement["chain"][number][] = [];
+	while (true) {
+		if (!eatSimpleToken(ctx, "(")) {
+			throw new Error("\"(\" expected");
+		}
+		const condition = parseExpression(ctx);
+		if (condition === undefined) {
+			throw new Error("Expression expected for condition");
+		}
+		if (!eatSimpleToken(ctx, ")")) {
+			throw new Error("\")\" expected");
+		}
+		const block = parseBlock(ctx);
+
+		chain.push({ condition, block });
+
+		if (!eatSimpleToken(ctx, "elif")) {
+			break;
+		}
+	}
+
+	let elseBlock: statements.Statement[] | undefined = undefined;
+	if (eatSimpleToken(ctx, "else")) {
+		elseBlock = parseBlock(ctx);
+	}
+
+	return statements.IfElseChainStatement(chain, elseBlock);
+}
+
+function parseWhileLoop(ctx: Context): statements.Statement | undefined {
+	if (!eatSimpleToken(ctx, "while")) {
+		return undefined;
+	}
+
+	if (!eatSimpleToken(ctx, "(")) {
+		throw new Error("\"(\" expected");
+	}
+	const condition = parseExpression(ctx);
+	if (condition === undefined) {
+		throw new Error("Expression expected for condition");
+	}
+	if (!eatSimpleToken(ctx, ")")) {
+		throw new Error("\")\" expected");
+	}
+	const block = parseBlock(ctx);
+
+	return statements.WhileLoopStatement(condition, block);
+}
+
+function parseReturn(ctx: Context): statements.Statement | undefined {
+	if (!eatSimpleToken(ctx, "return")) {
+		return undefined;
+	}
+
+	if (eatSimpleToken(ctx, ";")) {
+		return statements.ReturnStatement(undefined);
+	}
+
+	const expression = parseExpression(ctx);
+	if (expression === undefined) {
+		throw new Error("Expression or \";\" expected for return statement");
+	}
+
+	if (!eatSimpleToken(ctx, ";")) {
+		throw new Error("\";\" expected");
+	}
+
+	return statements.ReturnStatement(expression);
+}
+
+function parseBreak(ctx: Context): statements.Statement | undefined {
+	if (!eatSimpleToken(ctx, "break")) {
+		return undefined;
+	}
+
+	if (!eatSimpleToken(ctx, ";")) {
+		throw new Error("\";\" expected");
+	}
+
+	return statements.BreakStatement;
+}
+
+function parseContinue(ctx: Context): statements.Statement | undefined {
+	if (!eatSimpleToken(ctx, "continue")) {
+		return undefined;
+	}
+
+	if (!eatSimpleToken(ctx, ";")) {
+		throw new Error("\";\" expected");
+	}
+
+	return statements.BreakStatement;
+}
+
+function parseExpressionStatement(ctx: Context): statements.Statement | undefined {
+	const expression = parseExpression(ctx);
+	if (expression === undefined) {
+		return undefined;
+	}
+
+	if (!eatSimpleToken(ctx, ";")) {
+		throw new Error("\";\" expected");
+	}
+
+	return statements.ExpressionStatement(expression);
 }
 
 // --- EXPRESSIONS -------------------------------------------------------------
@@ -61,6 +259,56 @@ function parseExpression(ctx: Context, parentPriority = -1): expressions.Express
 
 	let ret = parseOperand(ctx);
 	if (ret === undefined) return undefined;
+
+	while (true) {
+
+		// function call
+
+		if (eatSimpleToken(ctx, "(")) {
+			const args: expressions.Expression[] = [];
+			while (true) {
+				if (eatSimpleToken(ctx, ")")) break;
+
+				const arg = parseExpression(ctx);
+				if (arg === undefined) {
+					throw new Error("Expression expected for function argument");
+				}
+
+				args.push(arg);
+				if (eatSimpleToken(ctx, ")")) {
+					break;
+				}
+				if (!eatSimpleToken(ctx, ",")) {
+					throw new Error("\",\" expected");
+				}
+			}
+			ret = expressions.CallExpression(ret, args);
+		}
+
+		else if (eatSimpleToken(ctx, "[")) {
+
+			// typed array
+
+			if (eatSimpleToken(ctx, "]")) {
+				ret = expressions.TypedArrayExpression(ret);
+			}
+
+			// indexing
+
+			else {
+				const index = parseExpression(ctx);
+				if (index === undefined) {
+					throw new Error("Expression expected for index");
+				}
+				if (!eatSimpleToken(ctx, "]")) {
+					throw new Error("\"]\" expected");
+				}
+				ret = expressions.BinaryExpression(expressions.INDEXING, ret, index);
+			}
+		}
+
+		else break;
+	}
 
 	while (true) {
 		if (ctx.ptr >= ctx.tokens.length) break;
@@ -76,8 +324,6 @@ function parseExpression(ctx: Context, parentPriority = -1): expressions.Express
 
 		ret = expressions.BinaryExpression(op.expressionType, ret, rhs);
 	}
-
-	/* TODO Parse function call and object/tuple indexing */
 
 	return ret;
 }

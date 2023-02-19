@@ -27,7 +27,7 @@ const TAU = 2 * Math.PI;
 const GLOBAL_SCOPE = (): Scope => ({
 	"nil": { constant: true, declaredType: values.NilValue, value: values.NilValue },
 	"false": { constant: true, declaredType: values.FalseValue, value: values.FalseValue },
-	"true": { constant: true, declaredType: values.FalseValue, value: values.FalseValue },
+	"true": { constant: true, declaredType: values.TrueValue, value: values.TrueValue },
 	"boolean": { constant: true, declaredType: values.BooleanValue, value: values.BooleanValue },
 	"string": { constant: true, declaredType: values.StringValue, value: values.StringValue },
 	"number": { constant: true, declaredType: values.NumberValue, value: values.NumberValue },
@@ -41,10 +41,30 @@ const GLOBAL_SCOPE = (): Scope => ({
 		constant: true,
 		declaredType: values.SignatureValue([values.AnyValue], values.NilValue),
 		value: values.FunctionValueIntrinsic(
-			[{ name: "value", type: values.StringValue }],
+			[{ name: "value", type: values.AnyValue }],
 			values.NilValue,
 			(value: values.Value) => {
-				console.log(values.toString(value));
+				if (value.type === values.STRING_LITERAL) {
+					process.stdout.write(value.value);
+				} else {
+					process.stdout.write(values.toString(value));
+				}
+				return values.NilValue;
+			},
+		),
+	},
+	"println": {
+		constant: true,
+		declaredType: values.SignatureValue([values.AnyValue], values.NilValue),
+		value: values.FunctionValueIntrinsic(
+			[{ name: "value", type: values.AnyValue }],
+			values.NilValue,
+			(value: values.Value) => {
+				if (value.type === values.STRING_LITERAL) {
+					console.log(value.value);
+				} else {
+					console.log(values.toString(value));
+				}
 				return values.NilValue;
 			},
 		),
@@ -67,7 +87,7 @@ const GLOBAL_SCOPE = (): Scope => ({
 		constant: true,
 		declaredType: values.SignatureValue([values.AnyValue], values.NilValue),
 		value: values.FunctionValueIntrinsic(
-			[{ name: "value", type: values.StringValue }],
+			[{ name: "value", type: values.AnyValue }],
 			values.NilValue,
 			(value: values.Value) => {
 				return values.StringLiteralValue(values.toString(value));
@@ -118,7 +138,7 @@ function runStatement(ctx: Context, statement: statements.Statement) {
 			if ("declaredType" in statement) {
 				declaredType = evaluateExpression(ctx, statement.declaredType);
 				if (!values.assignableTo(value, declaredType)) {
-					throw new Error(`Value ${values.toString(value)} is not assignable to declared type ${declaredType}`);
+					throw new Error(`Value ${values.toString(value)} is not assignable to declared type ${values.toString(declaredType)}`);
 				}
 			} else {
 				declaredType = values.deliteralize(value);
@@ -135,10 +155,11 @@ function runStatement(ctx: Context, statement: statements.Statement) {
 					throw new Error(`Cannot assign to constant binding ${lvalue.name}`);
 				}
 				if (!values.assignableTo(rvalue, lvalue.binding.declaredType)) {
-					throw new Error(`Value ${values.toString(rvalue)} is not assignable to declared type ${lvalue.binding.declaredType}`);
+					throw new Error(`Value ${values.toString(rvalue)} is not assignable to declared type ${values.toString(lvalue.binding.declaredType)}`);
 				}
+				lvalue.binding.value = rvalue;
 			} else {
-				assignPath(ctx, lvalue, rvalue);
+				assignPath(lvalue, rvalue);
 			}
 			break;
 		}
@@ -198,8 +219,8 @@ function runWhileLoop(ctx: Context, statement: statements.WhileLoopStatement) {
 function evaluateExpression(ctx: Context, expression: expressions.Expression): values.Value {
 	switch (expression.type) {
 		case expressions.ADD: {
-			const a = evaluateExpression(ctx, expression.a);
-			const b = evaluateExpression(ctx, expression.b);
+			const a = evaluateExpression(ctx, expression.lhs);
+			const b = evaluateExpression(ctx, expression.rhs);
 			if (a.type === values.STRING_LITERAL && b.type === values.STRING_LITERAL) {
 				return values.StringLiteralValue(a.value + b.value);
 			} else if (a.type === values.NUMBER_LITERAL && b.type === values.NUMBER_LITERAL) {
@@ -209,82 +230,82 @@ function evaluateExpression(ctx: Context, expression: expressions.Expression): v
 			}
 		}
 		case expressions.SUB: {
-			const a = evaluateExpression(ctx, expression.a);
-			const b = evaluateExpression(ctx, expression.b);
+			const a = evaluateExpression(ctx, expression.lhs);
+			const b = evaluateExpression(ctx, expression.rhs);
 			if (a.type !== values.NUMBER_LITERAL || b.type !== values.NUMBER_LITERAL) {
 				throw new Error(`Tried subtracting ${values.toString(a)} and ${values.toString(b)}`);
 			}
 			return values.NumberLiteralValue(a.value - b.value);
 		}
 		case expressions.MUL: {
-			const a = evaluateExpression(ctx, expression.a);
-			const b = evaluateExpression(ctx, expression.b);
+			const a = evaluateExpression(ctx, expression.lhs);
+			const b = evaluateExpression(ctx, expression.rhs);
 			if (a.type !== values.NUMBER_LITERAL || b.type !== values.NUMBER_LITERAL) {
 				throw new Error(`Tried multiplying ${values.toString(a)} and ${values.toString(b)}`);
 			}
 			return values.NumberLiteralValue(a.value * b.value);
 		}
 		case expressions.DIV: {
-			const a = evaluateExpression(ctx, expression.a);
-			const b = evaluateExpression(ctx, expression.b);
+			const a = evaluateExpression(ctx, expression.lhs);
+			const b = evaluateExpression(ctx, expression.rhs);
 			if (a.type !== values.NUMBER_LITERAL || b.type !== values.NUMBER_LITERAL) {
 				throw new Error(`Tried dividing ${values.toString(a)} and ${values.toString(b)}`);
 			}
 			return values.NumberLiteralValue(a.value / b.value);
 		}
 		case expressions.MOD: {
-			const a = evaluateExpression(ctx, expression.a);
-			const b = evaluateExpression(ctx, expression.b);
+			const a = evaluateExpression(ctx, expression.lhs);
+			const b = evaluateExpression(ctx, expression.rhs);
 			if (a.type !== values.NUMBER_LITERAL || b.type !== values.NUMBER_LITERAL) {
 				throw new Error(`Tried modulo division with ${values.toString(a)} and ${values.toString(b)}`);
 			}
 			return values.NumberLiteralValue(a.value % b.value);
 		}
 		case expressions.EQUAL: {
-			const a = evaluateExpression(ctx, expression.a);
-			const b = evaluateExpression(ctx, expression.b);
+			const a = evaluateExpression(ctx, expression.lhs);
+			const b = evaluateExpression(ctx, expression.rhs);
 			return values.equals(a, b) ? values.TrueValue : values.FalseValue;
 		}
 		case expressions.NOT_EQUAL: {
-			const a = evaluateExpression(ctx, expression.a);
-			const b = evaluateExpression(ctx, expression.b);
+			const a = evaluateExpression(ctx, expression.lhs);
+			const b = evaluateExpression(ctx, expression.rhs);
 			return values.equals(a, b) ? values.FalseValue : values.TrueValue;
 		}
 		case expressions.GREATER: {
-			const a = evaluateExpression(ctx, expression.a);
-			const b = evaluateExpression(ctx, expression.b);
+			const a = evaluateExpression(ctx, expression.lhs);
+			const b = evaluateExpression(ctx, expression.rhs);
 			if (a.type !== values.NUMBER_LITERAL || b.type !== values.NUMBER_LITERAL) {
 				throw new Error(`Tried comparing ${values.toString(a)} and ${values.toString(b)}`);
 			}
-			return a > b ? values.TrueValue : values.FalseValue;
+			return a.value > b.value ? values.TrueValue : values.FalseValue;
 		}
 		case expressions.GREATER_OR_EQUAL: {
-			const a = evaluateExpression(ctx, expression.a);
-			const b = evaluateExpression(ctx, expression.b);
+			const a = evaluateExpression(ctx, expression.lhs);
+			const b = evaluateExpression(ctx, expression.rhs);
 			if (a.type !== values.NUMBER_LITERAL || b.type !== values.NUMBER_LITERAL) {
 				throw new Error(`Tried comparing ${values.toString(a)} and ${values.toString(b)}`);
 			}
-			return a >= b ? values.TrueValue : values.FalseValue;
+			return a.value >= b.value ? values.TrueValue : values.FalseValue;
 		}
 		case expressions.LESS: {
-			const a = evaluateExpression(ctx, expression.a);
-			const b = evaluateExpression(ctx, expression.b);
+			const a = evaluateExpression(ctx, expression.lhs);
+			const b = evaluateExpression(ctx, expression.rhs);
 			if (a.type !== values.NUMBER_LITERAL || b.type !== values.NUMBER_LITERAL) {
 				throw new Error(`Tried comparing ${values.toString(a)} and ${values.toString(b)}`);
 			}
-			return a < b ? values.TrueValue : values.FalseValue;
+			return a.value < b.value ? values.TrueValue : values.FalseValue;
 		}
 		case expressions.LESS_OR_EQUAL: {
-			const a = evaluateExpression(ctx, expression.a);
-			const b = evaluateExpression(ctx, expression.b);
+			const a = evaluateExpression(ctx, expression.lhs);
+			const b = evaluateExpression(ctx, expression.rhs);
 			if (a.type !== values.NUMBER_LITERAL || b.type !== values.NUMBER_LITERAL) {
 				throw new Error(`Tried comparing ${values.toString(a)} and ${values.toString(b)}`);
 			}
-			return a <= b ? values.TrueValue : values.FalseValue;
+			return a.value <= b.value ? values.TrueValue : values.FalseValue;
 		}
 		case expressions.AND: {
-			const a = evaluateExpression(ctx, expression.a);
-			const b = evaluateExpression(ctx, expression.b);
+			const a = evaluateExpression(ctx, expression.lhs);
+			const b = evaluateExpression(ctx, expression.rhs);
 			if (
 				a.type !== values.FALSE && a.type !== values.TRUE
 				|| b.type !== values.FALSE && b.type !== values.TRUE
@@ -294,8 +315,8 @@ function evaluateExpression(ctx: Context, expression: expressions.Expression): v
 			return a.type === values.TRUE && b.type === values.TRUE ? values.TrueValue : values.FalseValue;
 		}
 		case expressions.OR: {
-			const a = evaluateExpression(ctx, expression.a);
-			const b = evaluateExpression(ctx, expression.b);
+			const a = evaluateExpression(ctx, expression.lhs);
+			const b = evaluateExpression(ctx, expression.rhs);
 			if (
 				a.type !== values.FALSE && a.type !== values.TRUE
 				|| b.type !== values.FALSE && b.type !== values.TRUE
@@ -330,13 +351,13 @@ function evaluateExpression(ctx: Context, expression: expressions.Expression): v
 			return values.deliteralize(op);
 		}
 		case expressions.UNION: {
-			const a = evaluateExpression(ctx, expression.a);
-			const b = evaluateExpression(ctx, expression.b);
+			const a = evaluateExpression(ctx, expression.lhs);
+			const b = evaluateExpression(ctx, expression.rhs);
 			return values.union(a, b);
 		}
 		case expressions.INTERSECT: {
-			const a = evaluateExpression(ctx, expression.a);
-			const b = evaluateExpression(ctx, expression.b);
+			const a = evaluateExpression(ctx, expression.lhs);
+			const b = evaluateExpression(ctx, expression.rhs);
 			const i = values.intersection(a, b);
 			if (i === undefined) {
 				throw new Error(`Intersecting ${values.toString(a)} and ${values.toString(b)} results in an impossible value`);
@@ -344,8 +365,8 @@ function evaluateExpression(ctx: Context, expression: expressions.Expression): v
 			return i;
 		}
 		case expressions.EXTENDS: {
-			const a = evaluateExpression(ctx, expression.a);
-			const b = evaluateExpression(ctx, expression.b);
+			const a = evaluateExpression(ctx, expression.lhs);
+			const b = evaluateExpression(ctx, expression.rhs);
 			return values.assignableTo(a, b) ? values.TrueValue : values.FalseValue;
 		}
 		case expressions.LITERAL: return expression.value;
@@ -384,7 +405,7 @@ function evaluateExpression(ctx: Context, expression: expressions.Expression): v
 
 			// intrinsic call
 			if (typeof fn.body === "function") {
-				for (let i = args.length; i < args.length; ++i) {
+				for (let i = 0; i < args.length; ++i) {
 					const arg = args[i];
 					const { name, type } = fn.arguments[i];
 					if (!values.assignableTo(arg, type)) {
@@ -399,7 +420,7 @@ function evaluateExpression(ctx: Context, expression: expressions.Expression): v
 				unwind: null,
 			};
 
-			for (let i = args.length; i < args.length; ++i) {
+			for (let i = 0; i < args.length; ++i) {
 				const arg = args[i];
 				const { name, type } = fn.arguments[i];
 				if (!values.assignableTo(arg, type)) {
@@ -426,8 +447,8 @@ function evaluateExpression(ctx: Context, expression: expressions.Expression): v
 			return values.NilValue;
 		}
 		case expressions.INDEXING: {
-			const lhs = evaluateExpression(ctx, expression.a);
-			const index = evaluateExpression(ctx, expression.b);
+			const lhs = evaluateExpression(ctx, expression.lhs);
+			const index = evaluateExpression(ctx, expression.rhs);
 			if (lhs.type === values.OBJECT && index.type === values.STRING_LITERAL) {
 				if (index.value in lhs.value) {
 					return lhs.value[index.value];
@@ -486,12 +507,12 @@ function evaluateLValue(ctx: Context, expression: expressions.Expression): LValu
 				return { name, binding, path };
 			}
 			case expressions.INDEXING: {
-				const index = evaluateExpression(ctx, expression.b);
+				const index = evaluateExpression(ctx, expression.rhs);
 				if (index.type !== values.STRING_LITERAL && index.type !== values.NUMBER_LITERAL) {
 					throw new Error(`Cannot index with ${values.toString(index)}`);
 				}
 				path.unshift(index.value);
-				expression = expression.a;
+				expression = expression.lhs;
 				break;
 			}
 			default:
@@ -500,26 +521,18 @@ function evaluateLValue(ctx: Context, expression: expressions.Expression): LValu
 	}
 }
 
-function assignPath(ctx: Context, ref: LValueRef, rvalue: values.Value) {
-	let declType = ref.binding.declaredType;
+function assignPath(ref: LValueRef, rvalue: values.Value) {
 	let lvalue = ref.binding.value;
-	for (let i = 0; i < ref.path.length - 1; ++i) {
+	for (let i = 0; i < ref.path.length; ++i) {
 		const node = ref.path[i];
 		switch (typeof node) {
 			case "string": {
 				if (lvalue.type !== values.OBJECT) {
 					throw new Error(`Tried indexing non-object with string`);
 				}
-				if (declType.type !== values.OBJECT) {
-					throw new Error("Indexed type is an object, but its declared type is not");
-				}
-				if (!(node in declType.value)) {
-					throw new Error(`Index ${node} does not exist in declared type ${values.toString(declType)}`);
-				}
 				if (i === ref.path.length - 1) {
 					lvalue.value[node] = rvalue;
 				} else {
-					declType = declType.value[node];
 					lvalue = lvalue.value[node];
 				}
 				break;
@@ -528,17 +541,10 @@ function assignPath(ctx: Context, ref: LValueRef, rvalue: values.Value) {
 				if (lvalue.type !== values.TUPLE) {
 					throw new Error(`Tried indexing non-tuple with number`);
 				}
-				if (declType.type !== values.TUPLE && declType.type !== values.TYPED_ARRAY) {
-					throw new Error("Indexed type is a tuple, but its declared type is not a tuple nor a typed array");
-				}
 				if (Number.isSafeInteger(node)) {
 					throw new Error(`Invalid index ${node}`);
 				}
-				if (node < 0 || (declType.type === values.TUPLE && node >= declType.value.length)) {
-					throw new Error(`Index ${node} is out of range for ${values.toString(declType)}`);
-				}
 				if (i === ref.path.length - 1) {
-					declType = declType.type === values.TUPLE ? declType.value[node] : declType.elementType;
 					lvalue = lvalue.value[node];
 				} else {
 					lvalue.value[node] = rvalue;
@@ -546,5 +552,9 @@ function assignPath(ctx: Context, ref: LValueRef, rvalue: values.Value) {
 				break;
 			}
 		}
+	}
+
+	if (!values.assignableTo(ref.binding.value, ref.binding.declaredType)) {
+		throw new Error(`Mutated binding to value ${values.toString(ref.binding.value)}, which is not assignable to its declared type ${values.toString(ref.binding.declaredType)}`);
 	}
 }

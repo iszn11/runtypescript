@@ -73,12 +73,14 @@ export const DeclarationStatement = (constant: boolean, name: string, declaredTy
 	...(declaredType !== undefined ? { declaredType } : {}),
 	value
 });
+export const AssignmentStatement = (lhs: Expression, rhs: Expression): AssignmentStatement => ({ type: ASSIGNMENT, lhs, rhs });
 export const IfElseChainStatement = (chain: IfElseChainStatement["chain"], elseBlock: readonly Statement[] | undefined): IfElseChainStatement => ({
 	type: IF_ELSE_CHAIN,
 	chain,
 	...(elseBlock !== undefined ? { elseBlock } : {}),
 });
-export const WhileLoopStatement = (condition: Expression, block: readonly Statement[]): WhileLoopStatement => ({ type: WHILE_LOOP, condition, block });
+export const WhileLoopStatement = (condition: Expression, block: readonly Statement[]): WhileLoopStatement => ({ type: WHILE_LOOP, condition, block: [...block] });
+export const ExpressionStatement = (expression: Expression): ExpressionStatement => ({ type: EXPRESSION, expression });
 export const ReturnStatement = (expression: Expression | undefined): ReturnStatement => ({
 	type: RETURN,
 	...(expression !== undefined ? { expression } : {}),
