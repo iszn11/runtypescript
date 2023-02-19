@@ -1,12 +1,13 @@
 # RuntypeScript (aka rts)
 
 RuntypeScript (aka rts) is a scripting language made in 48h for the fourth
-langjam hosted at [langjam/jam0003](https://github.com/langjam/jam0004). The
+langjam hosted at [langjam/jam0004](https://github.com/langjam/jam0004). The
 theme was *The sound(ness) of one hand typing*.
 
 The language is heavily inspired by TypeScript's type system, so being familiar
-with it will make it easier to understand this language. What I've noticed is
-that there are often two *islands*, so to speak.
+with it will make it easier to understand this language.
+
+What I've noticed is that there are often two *islands*, so to speak.
 
 ### The type island
 
@@ -102,7 +103,7 @@ types. Check out [examples](./examples) directory for more.
 
 ## Building
 
-This project is written in TypeScript and targets Node.js runtime. Run these
+This project is written in TypeScript and targets the Node.js runtime. Run these
 commands to install dependencies and compile:
 
 ```
