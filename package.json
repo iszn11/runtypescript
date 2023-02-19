@@ -2,7 +2,7 @@
 	"name": "runtypescript",
 	"author": "Szymon Nowakowski <smnbdg13@gmail.com> (https://renati.me)",
 	"type": "module",
-	"license": "GPL-2.0-only",
+	"license": "MIT",
 	"private": true,
 	"main": "./dist/index.js",
 	"dependencies": {
