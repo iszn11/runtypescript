@@ -1,6 +1,9 @@
 import * as expressions from "./expressions.js";
 import * as statements from "./statements.js";
 import * as values from "./values.js";
+import promptConfigure from "prompt-sync";
+
+const prompt = promptConfigure({ sigint: true });
 
 export type Binding = {
 	constant: boolean;
@@ -69,6 +72,46 @@ const GLOBAL_SCOPE = (): Scope => ({
 			},
 		),
 	},
+	"read_number": {
+		constant: true,
+		declaredType: values.SignatureValue([], values.UnionValue([values.NilValue, values.NumberValue])),
+		value: values.FunctionValueIntrinsic(
+			[],
+			values.UnionValue([values.NilValue, values.NumberValue]),
+			() => {
+				const line = prompt("");
+				try {
+					const number = Number.parseFloat(line);
+					return values.NumberLiteralValue(number);
+				} catch {
+					return values.NilValue;
+				}
+			},
+		),
+	},
+	"read_string": {
+		constant: true,
+		declaredType: values.SignatureValue([], values.StringValue),
+		value: values.FunctionValueIntrinsic(
+			[],
+			values.StringValue,
+			() => {
+				const line = prompt("");
+				return values.StringLiteralValue(line);
+			},
+		),
+	},
+	"to_string": {
+		constant: true,
+		declaredType: values.SignatureValue([values.AnyValue], values.NilValue),
+		value: values.FunctionValueIntrinsic(
+			[{ name: "value", type: values.AnyValue }],
+			values.NilValue,
+			(value: values.Value) => {
+				return values.StringLiteralValue(values.toString(value));
+			},
+		),
+	},
 	"sqrt": {
 		constant: true,
 		declaredType: values.SignatureValue([values.NumberValue], values.NumberValue),
@@ -83,14 +126,18 @@ const GLOBAL_SCOPE = (): Scope => ({
 			},
 		),
 	},
-	"to_string": {
+	"panic": {
 		constant: true,
 		declaredType: values.SignatureValue([values.AnyValue], values.NilValue),
 		value: values.FunctionValueIntrinsic(
-			[{ name: "value", type: values.AnyValue }],
+			[{ name: "message", type: values.StringValue }],
 			values.NilValue,
-			(value: values.Value) => {
-				return values.StringLiteralValue(values.toString(value));
+			(message: values.Value) => {
+				if (message.type === values.STRING_LITERAL) {
+					throw new Error(`Called panic function: ${message.value}`);
+				} else {
+					throw new Error(`Called panic function: ${values.toString(message)}`);
+				}
 			},
 		),
 	},
@@ -400,7 +447,7 @@ function evaluateExpression(ctx: Context, expression: expressions.Expression): v
 				throw new Error(`Cannot call ${values.toString(fn)}`);
 			}
 			if (fn.arguments.length !== args.length) {
-				throw new Error(`Function ${values.toString(fn)} has ${fn.arguments} argument(s), but ${args.length} provided`);
+				throw new Error(`Function ${values.toString(fn)} has ${fn.arguments.length} argument(s), but ${args.length} provided`);
 			}
 
 			// intrinsic call
@@ -541,13 +588,13 @@ function assignPath(ref: LValueRef, rvalue: values.Value) {
 				if (lvalue.type !== values.TUPLE) {
 					throw new Error(`Tried indexing non-tuple with number`);
 				}
-				if (Number.isSafeInteger(node)) {
+				if (!Number.isSafeInteger(node)) {
 					throw new Error(`Invalid index ${node}`);
 				}
 				if (i === ref.path.length - 1) {
-					lvalue = lvalue.value[node];
-				} else {
 					lvalue.value[node] = rvalue;
+				} else {
+					lvalue = lvalue.value[node];
 				}
 				break;
 			}

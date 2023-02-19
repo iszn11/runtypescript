@@ -872,7 +872,9 @@ export function toString(value: Value): string {
 		case STRING_LITERAL: return JSON.stringify(value.value);
 		case NUMBER: return "number";
 		case NUMBER_LITERAL: return JSON.stringify(value.value);
-		case TYPED_ARRAY: return `${toString(value.elementType)}[]`;
+		case TYPED_ARRAY: return value.elementType.type === UNION || value.elementType.type === SIGNATURE || value.elementType.type === FUNCTION
+			? `(${toString(value.elementType)})[]`
+			: `${toString(value.elementType)}[]`;
 		case TUPLE: return value.value.length === 0 ? "[]" : "[" + value.value.map(v => toString(v)).join(", ") + "]";
 		case OBJECT: return Object.keys(value.value).length === 0 ? "{}" : "{ " + Object.entries(value.value).map(([k, v]) => `${k}: ${toString(v)}`).join(", ") + " }";
 		case SIGNATURE: return "sig (" + value.argumentTypes.map(t => toString(t)).join(", ") + ") " + toString(value.returnType);
