@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en-US">
+	<head>
+		<meta charset="utf-8">
+		<title>RuntypeScript (rts) documentation</title>
+		<link rel="stylesheet" href="style.css">
+	</head>
+	<body>
+		<main>
+			<h1><a href="index.html">RuntypeScript</a></h1>
+			<nav>
+				<ul>
+					<li><a href="index.html">Overview</a></li>
+					<li><a href="type-system.html">Type system</a></li>
+					<li><a href="global-constants.html">Global constants</a></li>
+					<li><a href="statements.html">Statements</a></li>
+					<li><a href="expressions.html">Expressions</a></li>
+				</ul>
+			</nav>
+			<h2>Type system is the value system</h2>
+			<p>Types and values are mixed with each other, so using the terms <em>type</em> and <em>value</em> interchangeably can get confusing (because they aren't different things in this language). Since these value/type hybrids work more like types than values, we will refer to them only as types on this page.</p>
+			<h2>nil</h2>
+			<p>Nil represents nothing. It is returned by a function when nothing is returned explicitly.</p>
+			<h2>false, true</h2>
+			<p>False and true are the results of comparison operators and can be used as operand for logical operators.</p>
+			<h2>boolean</h2>
+			<p>Boolean is a union of false and true.</p>
+			<h2>string</h2>
+			<p>String is a union of every possible string literal.</p>
+			<h2>String literals</h2>
+			<p>String literals are enclosed in double quotes. You can make use of the following escape sequences in a string literal:</p>
+			<ul>
+				<li>\\ (backslash)</li>
+				<li>\" (double quote)</li>
+				<li>\n (line feed)</li>
+				<li>\t (tab)</li>
+				<li>\r (carriage return)</li>
+			</ul>
+			<h2>number</h2>
+			<p>Number is a union of every possible number literal.</p>
+			<h2>Number literals</h2>
+			<p>Number literals are double presicion floating-point. Only decimal literals are supported (no hexadecimal or exponentials).</p>
+			<h2>Typed array</h2>
+			<p>Typed array is defined by specifying its element type. Type array is a union of every possible tuple, for which every element is assignable to typed array's element type. You can turn any type into a typed array by appending a pair of square brackets after the type.</p>
+<pre><span class="decl">const</span> <span class="const">array_of_number</span> = <span class="const">number</span>[];
+<span class="decl">const</span> <span class="const">array_of_zero_or_foo</span> = (<span class="num">0</span> | <span class="str">"foo"</span>)[];
+<span class="decl">const</span> <span class="const">array_of_array</span> = <span class="const">any</span>[][];</pre>
+			<h2>Tuple</h2>
+			<p>Tuples are arrays of types and are indexed by number literals.</p>
+<pre><span class="decl">const</span> <span class="const">tuple</span> = [<span class="const">number</span>, <span class="const">string</span>];
+<span class="decl">const</span> <span class="const">also_tuple</span> = [<span class="num">0</span>, <span class="num">1</span>, <span class="num">2</span>, <span class="decl">fn</span> () <span class="const">nil</span> {}, <span class="const">boolean</span>, [<span class="const">number</span>, <span class="str">"foo"</span>]];</pre>
+			<p>Tuples are passed by reference and are mutable.</p>
+			<h2>Object</h2>
+			<p>Objects can hold multiple properties and are indexed by string literals.</p>
+<pre><span class="decl">const</span> <span class="const">empty_obj</span> = {};
+<span class="decl">const</span> <span class="const">simple_obj</span> = { <span class="var">foo</span>: <span class="str">"bar"</span>, <span class="var">baz</span>: <span class="const">string</span>[] };
+<span class="decl">const</span> <span class="const">nested_obj</span> = { <span class="var">foo</span>: {}, <span class="var">baz</span>: [{}] };
+</pre>
+			<h2>Signatures</h2>
+			<p>Signatures are specified by a list of argument types and a return type. A signature is a union of every possible function assignable to that signature.</p>
+<pre><span class="decl">const</span> <span class="const">binary_sig</span> = <span class="decl">sig</span> (<span class="const">any</span>, <span class="const">any</span>) <span class="const">any</span>;
+<span class="decl">const</span> <span class="const">filter_sig</span> = <span class="decl">sig</span> (<span class="const">any</span>[], <span class="decl">sig</span> (<span class="const">any</span>) <span class="const">boolean</span>) <span class="const">any</span>[];</pre>
+			<p>Signatures never contain names of arguments.</p>
+			<h2>Functions</h2>
+			<p>Every function is its own distinct type tied to its literal.</p>
+<pre><span class="decl">const</span> <span class="const">concat</span> = <span class="decl">fn</span> (<span class="var">a</span>: <span class="const">string</span>, <span class="var">b</span>: <span class="const">string</span>) <span class="const">string</span> { <span class="kw">return</span> <span class="var">a</span> + <span class="var">b</span>; };</pre>
+			<p>Function arguments are not constants and can be reassigned inside the function body. A function will capture its outside scope.</p>
+			<p>There are <em>intrinsic</em> functions in this language, which are global constants and their function bodies are implemented in the interpreter itself instead of the language. They cannot be created by language users.</p>
+			<h2>Unions</h2>
+			<p>Unions represents a type, to which many other types are assignable. You can create unions using "|" operator. Unions do not nest (a union of unions collapses into a single union) and are immutable.</p>
+			<h2>any</h2>
+			<p>Any is a union of every possible type in this language, including itself.</p>
+			<h2>Deliteralization</h2>
+			<p><em>Deliteralization</em> is a transformation of types, that is performed to determine the declared type when none was provided. You can use unary "~" operator to perform the same process yourself. Deliteralization rules:</p>
+			<ul>
+				<li>false becomes boolean</li>
+				<li>true becomes boolean</li>
+				<li>string literals become string</li>
+				<li>number literals become number</li>
+				<li>tuples become typed arrays of union of all tuple's elements deliteralized</li>
+				<li>object become objects with their properties deliteralized</li>
+				<li>functions become signatures with equivalent argument and return types</li>
+				<li>unions become a union of its types deliteralized</li>
+				<li>other types are left intact</li>
+			</ul>
+			<h2>Assignability</h2>
+			<p><em>Assignability</em> is a process that determines whether a type can be assigned to a variable's declared type. You can use binary "extends" operator to perform the same process yourself. Assignability rules:</p>
+			<ul>
+				<li>a union is assignable to a type when all union's types are assignable to that type</li>
+				<li>only nil is assignable to nil</li>
+				<li>only false is assignable to false</li>
+				<li>only true is assignable to true</li>
+				<li>false, true and boolean are assignable to boolean</li>
+				<li>string and string literals are assignable to string</li>
+				<li>only identical string literals are assignable to string literals</li>
+				<li>number and number literals are assignable to number</li>
+				<li>only identical number literals are assignable to number literals</li>
+				<li>a typed array is assignable to other typed array if its element type is assignable to other typed array's element type</li>
+				<li>a tuple is assignable to a typed array if all its elements are assignable to typed array's element type</li>
+				<li>an object is assignable to other object if every property of other object also exists in the object and types of the object properties are assignable to correspoding types of the other object properties</li>
+				<li>a signature is assignable to other signature if every argument of the signature is assignable to corresponding other signature's arguments and other siganture's return type is assignable to the signature return type</li>
+				<li>a function is assignable to a signature if its deliteralization is assignable to the signature</li>
+				<li>only identical functions (by reference) are assignable to functions</li>
+				<li>a type is assignable to a union if its assignable to any of union's types</li>
+				<li>every type is assignable to any</li>
+			</ul>
+		</main>
+	</body>
+</html>

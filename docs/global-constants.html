@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en-US">
+	<head>
+		<meta charset="utf-8">
+		<title>RuntypeScript (rts) documentation</title>
+		<link rel="stylesheet" href="style.css">
+	</head>
+	<body>
+		<main>
+			<h1><a href="index.html">RuntypeScript</a></h1>
+			<nav>
+				<ul>
+					<li><a href="index.html">Overview</a></li>
+					<li><a href="type-system.html">Type system</a></li>
+					<li><a href="global-constants.html">Global constants</a></li>
+					<li><a href="statements.html">Statements</a></li>
+					<li><a href="expressions.html">Expressions</a></li>
+				</ul>
+			</nav>
+			<h2>Global constants</h2>
+			<p>Global constants are implicitly defined constant variables at the top-level scope.</p>
+<pre><span class="decl">const</span> <span class="const">nil</span>: <span class="const">nil</span> <span class="comm">                   // the nil type</span>
+<span class="decl">const</span> <span class="const">false</span>: <span class="const">false</span> <span class="comm">               // the false type</span>
+<span class="decl">const</span> <span class="const">true</span>: <span class="const">true</span> <span class="comm">                 // the true type</span>
+<span class="decl">const</span> <span class="const">boolean</span>: <span class="const">boolean</span> <span class="comm">           // the boolean type</span>
+<span class="decl">const</span> <span class="const">string</span>: <span class="const">string</span> <span class="comm">             // the string type</span>
+<span class="decl">const</span> <span class="const">number</span>: <span class="const">number</span> <span class="comm">             // the number type</span>
+<span class="decl">const</span> <span class="const">any</span>: <span class="const">any</span> <span class="comm">                   // the any type</span>
+<span class="decl">const</span> <span class="const">nan</span>: <span class="const">number</span> <span class="comm">                // not a number</span>
+<span class="decl">const</span> <span class="const">inf</span>: <span class="const">number</span> <span class="comm">                // positive infinity</span>
+<span class="decl">const</span> <span class="const">pi</span>: <span class="const">number</span> <span class="comm">                 // pi constant</span>
+<span class="decl">const</span> <span class="const">tau</span>: <span class="const">number</span> <span class="comm">                // tau constant (2 * pi)</span>
+<span class="decl">const</span> <span class="const">e</span>: <span class="const">number</span> <span class="comm">                  // Euler's number</span>
+<span class="decl">const</span> <span class="const">print</span>: <span class="decl">sig</span> (<span class="const">any</span>) <span class="const">nil</span> <span class="comm">       // prints to stdout</span>
+<span class="decl">const</span> <span class="const">println</span>: <span class="decl">sig</span> (<span class="const">any</span>) <span class="const">nil</span> <span class="comm">     // prints to stdout and appends a line feed</span>
+<span class="decl">const</span> <span class="const">to_string</span>: <span class="decl">sig</span> (<span class="const">any</span>) <span class="const">string</span> <span class="comm">// converts every type to string</span>
+<span class="decl">const</span> <span class="const">sqrt</span>: <span class="decl">sig</span> (<span class="const">number</span>) <span class="const">number</span> <span class="comm">  // square root</span>
+<span class="decl">const</span> <span class="const">panic</span>: <span class="decl">sig</span> (<span class="const">string</span>) <span class="const">nil</span> <span class="comm">    // terminates the program with a runtime error</span></pre>
+		</main>
+	</body>
+</html>

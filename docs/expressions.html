@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en-US">
+	<head>
+		<meta charset="utf-8">
+		<title>RuntypeScript (rts) documentation</title>
+		<link rel="stylesheet" href="style.css">
+	</head>
+	<body>
+		<main>
+			<h1><a href="index.html">RuntypeScript</a></h1>
+			<nav>
+				<ul>
+					<li><a href="index.html">Overview</a></li>
+					<li><a href="type-system.html">Type system</a></li>
+					<li><a href="global-constants.html">Global constants</a></li>
+					<li><a href="statements.html">Statements</a></li>
+					<li><a href="expressions.html">Expressions</a></li>
+				</ul>
+			</nav>
+			<h2>Binary operators</h2>
+			<table>
+				<thead>
+					<tr>
+						<th>Operator</th>
+						<th>Applicable to</th>
+						<th>Description</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>+</td>
+						<td>number literals</td>
+						<td>addition</td>
+					</tr>
+					<tr>
+						<td>+</td>
+						<td>string literals</td>
+						<td>concatenation</td>
+					</tr>
+					<tr>
+						<td>-</td>
+						<td>number literals</td>
+						<td>subtraction</td>
+					</tr>
+					<tr>
+						<td>*</td>
+						<td>number literals</td>
+						<td>multiplication</td>
+					</tr>
+					<tr>
+						<td>/</td>
+						<td>number literals</td>
+						<td>division</td>
+					</tr>
+					<tr>
+						<td>%</td>
+						<td>number literals</td>
+						<td>modulo</td>
+					</tr>
+					<tr>
+						<td>==</td>
+						<td>all types</td>
+						<td>type equality</td>
+					</tr>
+					<tr>
+						<td>!=</td>
+						<td>all types</td>
+						<td>type inequality</td>
+					</tr>
+					<tr>
+						<td>&gt;</td>
+						<td>number literals</td>
+						<td>comparison</td>
+					</tr>
+					<tr>
+						<td>&gt;=</td>
+						<td>number literals</td>
+						<td>comparison</td>
+					</tr>
+					<tr>
+						<td>&lt;</td>
+						<td>number literals</td>
+						<td>comparison</td>
+					</tr>
+					<tr>
+						<td>&lt;=</td>
+						<td>number literals</td>
+						<td>comparison</td>
+					</tr>
+					<tr>
+						<td>and</td>
+						<td>false or true</td>
+						<td>logical and</td>
+					</tr>
+					<tr>
+						<td>or</td>
+						<td>false or true</td>
+						<td>logical or</td>
+					</tr>
+					<tr>
+						<td>|</td>
+						<td>all types</td>
+						<td>type union</td>
+					</tr>
+					<tr>
+						<td>&amp;</td>
+						<td>all types</td>
+						<td>type intersection</td>
+					</tr>
+					<tr>
+						<td>extends</td>
+						<td>all types</td>
+						<td>type assignability</td>
+					</tr>
+				</tbody>
+			</table>
+			<h2>Unary operators</h2>
+			<table>
+				<thead>
+					<tr>
+						<th>Operator</th>
+						<th>Applicable to</th>
+						<th>Description</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>-</td>
+						<td>number literals</td>
+						<td>negation</td>
+					</tr>
+					<tr>
+						<td>#</td>
+						<td>tuples</td>
+						<td>tuple length</td>
+					</tr>
+					<tr>
+						<td>~</td>
+						<td>all types</td>
+						<td>deliteralization</td>
+					</tr>
+					<tr>
+						<td>not</td>
+						<td>false or true</td>
+						<td>logical not</td>
+					</tr>
+					<tr>
+						<td>decltype</td>
+						<td>identifiers</td>
+						<td>declared type</td>
+					</tr>
+				</tbody>
+			</table>
+			<h2>Operator priority</h2>
+			<table>
+				<thead>
+					<tr>
+						<th>Priority</th>
+						<th>Operators</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>0</td>
+						<td>or</td>
+					</tr>
+					<tr>
+						<td>1</td>
+						<td>and</td>
+					</tr>
+					<tr>
+						<td>2</td>
+						<td>&lt; &gt; &lt;= &gt;= == != extends</td>
+					</tr>
+					<tr>
+						<td>3</td>
+						<td>|</td>
+					</tr>
+					<tr>
+						<td>4</td>
+						<td>&amp;</td>
+					</tr>
+					<tr>
+						<td>5</td>
+						<td>+ - (binary)</td>
+					</tr>
+					<tr>
+						<td>6</td>
+						<td>* / %</td>
+					</tr>
+					<tr>
+						<td>7</td>
+						<td>- (unary) not # ~ decltype</td>
+					</tr>
+				</tbody>
+			</table>
+			<h2>Identifier</h2>
+			<p>An identifier starts with a letter (as defined by Unicode <em>Letter</em> category) or underscore optionally followed by a sequence of letters, numbers (as defined by Unicode <em>Letter</em>, <em>Decimal Number</em> and <em>Letter Number</em> categories) and underscores, and is not one of the reserved keywords:</p>
+			<ul>
+				<li>and</li>
+				<li>break</li>
+				<li>const</li>
+				<li>continue</li>
+				<li>decltype</li>
+				<li>elif</li>
+				<li>else</li>
+				<li>extends</li>
+				<li>fn</li>
+				<li>if</li>
+				<li>not</li>
+				<li>or</li>
+				<li>return</li>
+				<li>sig</li>
+				<li>var</li>
+				<li>while</li>
+			</ul>
+			<p>Keep in mind that there are also predefined global constants, and that shadowing is forbidden.</p>
+			<h2>Function call</h2>
+			<p>Function is called with a set of round brackets. Arguments are seperated by a comma. Leading comma is permitted.</p>
+			<p>Argument count has to match exactly or a runtime error will occur.</p>
+<pre><span class="decl">const</span> <span class="fn">add</span> = <span class="decl">fn</span> (<span class="var">a</span>: <span class="const">number</span>, <span class="var">b</span>: <span class="const">number</span>) <span class="const">number</span> { <span class="kw">return</span> <span class="var">a</span> + <span class="var">b</span>; };
+<span class="fn">println</span>(<span class="fn">add</span>(<span class="num">1</span>, <span class="num">2</span>));
+<span class="fn">println</span>(<span class="fn">add</span>(<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>)); <span class="comm">// wrong</span>
+<span class="fn">println</span>(<span class="fn">add</span>(<span class="num">1</span>, <span class="str">"foo"</span>)); <span class="comm">// also wrong</span></pre>
+			<h2>Indexing</h2>
+			<p>Indexing is performed with a set of square brackets. You can index tuples with number literals or objects with string literals.</p>
+<pre><span class="decl">const</span> <span class="const">array</span>: <span class="const">number</span>[] = [];
+<span class="const">array</span>[<span class="num">0</span>] = <span class="num">1</span>;
+
+<span class="decl">const</span> <span class="const">object</span>: <span class="const">any</span> = {};
+<span class="const">object</span>[<span class="str">"foo"</span>] = <span class="str">"bar"</span>;</pre>
+			<p>Note that there is no shorthand notation (i.e. dot notation) for accessing object properties.</p>
+			<h2>Literals</h2>
+			<p>Check the documentation about type system to learn about literals.</p>
+		</main>
+	</body>
+</html>

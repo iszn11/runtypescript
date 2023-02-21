@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en-US">
+	<head>
+		<meta charset="utf-8">
+		<title>RuntypeScript (rts) documentation</title>
+		<link rel="stylesheet" href="style.css">
+	</head>
+	<body>
+		<main>
+			<h1><a href="index.html">RuntypeScript</a></h1>
+			<nav>
+				<ul>
+					<li><a href="index.html">Overview</a></li>
+					<li><a href="type-system.html">Type system</a></li>
+					<li><a href="global-constants.html">Global constants</a></li>
+					<li><a href="statements.html">Statements</a></li>
+					<li><a href="expressions.html">Expressions</a></li>
+				</ul>
+			</nav>
+			<h2>Comments</h2>
+			<pre><span class="comm">// Only single line comments</span></pre>
+			<h2>Declarations</h2>
+<pre><span class="decl">var</span> <span class="var">x</span> = <span class="const">y</span>;
+<span class="decl">var</span> <span class="var">x</span>: <span class="const">T</span> = <span class="const">y</span>;
+<span class="decl">const</span> <span class="const">x</span> = <span class="const">y</span>;
+<span class="decl">const</span> <span class="const">x</span>: <span class="const">T</span> = <span class="const">y</span>;</pre>
+			<p>Declaration with no declared type:</p>
+			<pre><span class="decl">const</span> <span class="const">x</span> = <span class="const">y</span>;</pre>
+			<p>is a shorthand for:</p>
+			<pre><span class="decl">const</span> <span class="const">x</span>: ~<span class="const">y</span> = <span class="const">y</span>;</pre>
+			<p>except that y is evaluated only once.</p>
+			<p>Declaration cannot shadow other variables.</p>
+			<h2>Assignment</h2>
+			<p>Left-hand side of an assignment can only consist of an identifier followed by an optional chain of indexing expressions. Indexes themselves can be arbitrary expressions.</p>
+			<p>An assignment results in a runtime error if a variable after assignment (including mutation) is not assignable to its declared type.</p>
+<pre><span class="decl">const</span> <span class="const">x</span>: { <span class="var">prop</span>: <span class="const">string</span> } = { <span class="var">prop</span>: <span class="str">"foo"</span> };
+
+<span class="comm">// allowed</span>
+<span class="const">x</span>[<span class="str">"prop"</span>] = <span class="str">"bar"</span>;
+
+<span class="comm">// not allowed, { prop: 1 } not assignable to { prop: string }</span>
+<span class="const">x</span>[<span class="str">"prop"</span>] = <span class="num">1</span>;</pre>
+			<p>You can also use the following assignment shorthands:</p>
+			<ul>
+				<li>+=</li>
+				<li>-=</li>
+				<li>*=</li>
+				<li>/=</li>
+				<li>%=</li>
+				<li>|=</li>
+				<li>&=</li>
+			</ul>
+			<h2>If, elif, else</h2>
+<pre><span class="kw">if</span> (CONDITION) {
+    <span class="comm">// (...)</span>
+} <span class="kw">elif</span> (CONDITION) {
+    <span class="comm">// (...)</span>
+} <span class="kw">else</span> {
+    <span class="comm">// (...)</span>
+}</pre>
+			<p>Braces are always required.</p>
+			<h2>While</h2>
+<pre><span class="kw">while</span> (CONDITION) {
+    <span class="comm">// (...)</span>
+}</pre>
+			<p>Braces are always required.</p>
+			<p>You can use break and continue statements inside a while loop.</p>
+			<h2>Return</h2>
+<pre><span class="kw">return</span> EXPRESSION;
+<span class="kw">return</span>; <span class="comm">// shorthand for return nil;</span></pre>
+		</main>
+	</body>
+</html>
+
+<!--
+if-else chain
+parens and braces required
+
+
+
+while loop
+
+while (cond) {
+
+}
+
+OTHER
+
+return; (equivalent to return nil; or when function ends)
+return x;
+continue;
+break;
+expression;
+-->
